@@ -84,11 +84,7 @@
 		const insertar_tabla = (op,acc,q,c,d) => {body_t.innerHTML+= `<tr><td>${op}</td><td>${acc}</td><td>${q}</td><td>${c}</td><td>${d}</td></tr>`}
 		const set_cociente_resto_b = (coc,res) => {cociente_b.value = coc;resto_b.value=res;}
 		const set_cociente_resto_d = (coc,res) => {cociente_d.value = coc;resto_d.value=res;}
-
-		let REG_ACC = null;
-		let REG_Q = null;
 		let counter = 8;
-		let REG_D = null;
 
 		btn_calcular.addEventListener('click', function(){		
 			limpiar_tabla();	
@@ -99,11 +95,8 @@
 			if(divisor.value > 255 || divisor.value < 1){error('El divisor acepta valores entre 1 y 255');divisor.focus();return;}
 			clear_error();
 
-			/*Asignaciones*/
-			REG_ACC = dec_to_bin(dividendo.value).padStart(16, "0").slice(0,8);
-			REG_Q = dec_to_bin(dividendo.value).padStart(16, "0").slice(8);
-			REG_D = dec_to_bin(divisor.value).padStart(8, "0");
-			dividir(dec_to_bin(dividendo.value).padStart(16, "0"), REG_D, counter);
+			/*Comenzar a dividir*/
+			dividir(dec_to_bin(dividendo.value).padStart(16, "0"), dec_to_bin(divisor.value).padStart(8, "0"), counter);
 		});
 
 		function dividir(div,dsor,counter){
