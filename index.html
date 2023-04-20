@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Arquitectura Ej </title>
+	<style type="text/css">
+		body{font-family: Arial, Helvetica, sans-serif;color: white;}
+		input{width: 350px;height: 30px;border-radius: 4px}
+		*:disabled{ color: linen;opacity: 1;}
+		.btn{margin-top: 10px;width: 177px;height: 39px;border-radius: 4px;font-size: 14px;}
+		.btn.warning{color: white;background-color:#f58742; border-color: #f58742;}
+		.btn.success{color: white;background-color: #32a852;border-color: #1f6b34;}
+		.warning:hover{color: white;background-color: #bd6731;cursor: pointer;}
+		.success:hover{background-color: #23783a;cursor: pointer;}
+		label{display: block;}
+		div.alert{margin-top: 10px;background-color: #cc3727;color: white; font-size: 16px;display: block;border-radius: 6px;min-height: 55px;padding: 10px;}
+		table{margin-top: 10px;}
+		table td{font-weight: lighter;font-size: 18px;}
+	</style>
+</head>
+<body style="background-color: #0f2938;">
+	<h2>Arquitectura de Computadoras - 2023 - Trabajo Práctico 3, Ejercicio 11</h2>
+	<p>
+		<strong>Consigna</strong><br>
+		Hacer un programa que divida un dividendo natural de 16 bits por un divisor natural de 8 bits
+		presentando como resultado el cociente y el resto . No está permitido usar las instrucciones de
+	división y/o módulo</p>
+	<hr>
+	<p>Ingresar el dividendo y divisor como números <strong>NATURALES</strong></p>
+	<label style="margin-top: 10px">Dividendo</label>
+	<input type="number" id="dividendo" autofocus size="16">
+	<label>Divisor</label>
+	<input type="number" id="divisor" max="8">
+	<br>
+	<button id="btn_calcular" class="btn success">Calcular</button>
+	<button id="btn_calcular" class="btn warning">Restablecer</button>
+	<div class="alert" id="alert" style="display: none;">
+		<strong>Error</strong>
+		<br>
+		<span id="msg_error" style="margin-top: 10px;"></span>
+	</div>
+	<hr>
+	<label style="margin-top: 15px;">Cociente / Resto (Binario)</label>
+	<div>
+		<input type="text" disabled id="cociente_binario" placeholder="Cociente">
+		<input type="text" disabled id="resto_binario" placeholder="Resto">
+	</div>
+	<label style="margin-top:15px;">Cociente / Resto (Decimal)</label>
+	<div>
+		<input type="text" disabled id="cociente_decimal" placeholder="Cociente">
+		<input type="text" disabled id="resto_decimal" placeholder="Resto">
+	</div>
+	<table border="1" width="30%">
+		<thead>
+			<tr>
+				<td width="20%"><strong>Acción</strong></td>
+				<td width="20%"><strong>Acc</strong></td>
+				<td width="20%"><strong>Reg Q</strong></td>
+				<td width="20%"><strong>Cont.</strong></td>
+				<td width="20%"><strong>Reg. D</strong></td>
+			</tr>
+		</thead>
+		<tbody id="body_table"></tbody>
+	</table>
+
+	<script type="text/javascript">
+		const dividendo = document.getElementById('dividendo');
+		const divisor = document.getElementById('divisor');
+		const alert = document.getElementById('alert');
+		const msg_error = document.getElementById('msg_error');
+		const btn_calcular = document.getElementById('btn_calcular');
+		const body_t = document.getElementById('body_table');
+		const cociente_b = document.getElementById('cociente_binario');
+		const cociente_d = document.getElementById('cociente_decimal');
+		const resto_b = document.getElementById('resto_binario');
+		const resto_d = document.getElementById('resto_decimal');
+		/*Funciones auxiliares*/
+		const error = (msg) => {alert.style.display = 'block'; msg_error.innerHTML = msg;}
+		const clear_error = () => {alert.style.display = 'none';}
+		const dec_to_bin = (x) =>{return Number(x).toString(2);}
+		const reemplazar_parte_alta = (original, reemplazo) =>{return reemplazo + original.slice(8);}
+		const limpiar_tabla = () => {body_t.innerHTML="";}
+		const insertar_tabla = (op,acc,q,c,d) => {body_t.innerHTML+= `<tr><td>${op}</td><td>${acc}</td><td>${q}</td><td>${c}</td><td>${d}</td></tr>`}
+		const set_cociente_resto_b = (coc,res) => {cociente_b.value = coc;resto_b.value=res;}
+		const set_cociente_resto_d = (coc,res) => {cociente_d.value = coc;resto_d.value=res;}
+
+		let REG_ACC = null;
+		let REG_Q = null;
+		let counter = 8;
+		let REG_D = null;
+
+		btn_calcular.addEventListener('click', function(){		
+			limpiar_tabla();	
+			/*Comprobaciones*/
+			if(!dividendo.value){error('Falta el dividendo');dividendo.focus();return;}
+			if(dividendo.value > 65535 || dividendo.value < 0){error('El dividendo acepta valores entre 0 y 65535');dividendo.focus();return;}
+			if(!divisor.value) {error('Falta el divisor');divisor.focus();return;}
+			if(divisor.value > 255 || divisor.value < 1){error('El divisor acepta valores entre 1 y 255');divisor.focus();return;}
+			clear_error();
+
+			/*Asignaciones*/
+			REG_ACC = dec_to_bin(dividendo.value).padStart(16, "0").slice(0,8);
+			REG_Q = dec_to_bin(dividendo.value).padStart(16, "0").slice(8);
+			REG_D = dec_to_bin(divisor.value).padStart(8, "0");
+			dividir(dec_to_bin(dividendo.value).padStart(16, "0"), REG_D, counter);
+		});
+
+		function dividir(div,dsor,counter){
+			/*Log de inicial*/
+			insertar_tabla('Inicio',div.slice(0,8),div.slice(8),dec_to_bin(counter).padStart(8, '0'), dsor);
+			let insertar_uno_bit_menos_significativo = false;
+			let acc = 0;
+			for (var i = counter - 1; i >= 0; i--) {
+				/*Pregunto si se puede hacer la resta de Acc - D*/
+				if((parseInt(div.slice(0,8), 2) - parseInt(dsor,2)) >=0){
+					/*Log de valores a restar*/
+					insertar_tabla('Resta',div.slice(0,8),'','', dsor);
+					/*Si se puede restar se resta*/
+					let result = parseInt(div.slice(0,8), 2) - parseInt(dsor,2); 
+					if(result >= 0)
+						insertar_uno_bit_menos_significativo = true;
+					/*Reemplazar ACC por Resultado de la resta*/
+					div = dec_to_bin(result).padStart(8, '0') + div.slice(8);
+					insertar_tabla('Resultado',div.slice(0,8),'','','');
+				}
+
+				/*Inserta un uno en el LSB*/
+				if(insertar_uno_bit_menos_significativo){
+					div = div.slice(0,-1) + '1';
+					insertar_tabla('LSB (Q) = 1',div.slice(0,8),div.slice(8),'', dsor);
+					insertar_uno_bit_menos_significativo = false;
+				}
+				/*Desplaza 1 izquierda todo el Acc+Q*/
+				div = div.split('');
+				div.push('0');
+				div = div.join('').slice(1);
+				/*Log desplazamiento*/
+				insertar_tabla('Desplazar',div.slice(0,8),div.slice(8),dec_to_bin(i).padStart(8, '0'), dsor);
+			}
+
+			set_cociente_resto_b(div.slice(8),div.slice(0,8))
+			set_cociente_resto_d(parseInt(div.slice(8), 2),parseInt(div.slice(0,8),2));
+		}
+	</script>
+</body>
+</html>
